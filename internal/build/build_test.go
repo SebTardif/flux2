@@ -288,30 +288,6 @@ spec:
 	}
 }
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			r, err := yaml.Parse(tc.yamlStr)
-			if err != nil {
-				t.Fatalf("unable to parse yaml: %v", err)
-			}
-
-			resource := &resource.Resource{RNode: *r}
-			err = maskSopsData(resource)
-			if err != nil {
-				t.Fatalf("unable to trim sops data: %v", err)
-			}
-
-			sYaml, err := resource.AsYAML()
-			if err != nil {
-				t.Fatalf("unable to convert sanitized resources to yaml: %v", err)
-			}
-			if diff := cmp.Diff(string(sYaml), tc.expected); diff != "" {
-				t.Errorf("unexpected sanitized resources: (-got +want)%v", diff)
-			}
-		})
-	}
-}
-
 func Test_unMarshallKustomization(t *testing.T) {
 	tests := []struct {
 		name        string
