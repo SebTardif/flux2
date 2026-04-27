@@ -58,31 +58,41 @@ flux create kustomization mysql \
   --decryption-provider=sops \
   --decryption-secret=sops-age \
   --namespace=flux-system \
+  --interval=1m \
   --export
 ```
 
-And a corresponding golden file verifying the generated `spec.decryption` block.
+And a corresponding golden file verifying the generated `spec.decryption` block. Added
+`--interval=1m` explicitly to avoid the `resetCmdArgs()` Cobra flag-state pollution
+where a prior test zeroes out the shared `createArgs.interval`.
 
 **Files:**
 - `cmd/flux/create_kustomization_test.go`
 - `cmd/flux/testdata/create_kustomization/with-sops-decryption.yaml`
 
+### 4. Integration test: `flux build kustomization` with SOPS-encrypted HelmRelease
+
+Added two test cases to `TestBuildLocalKustomization` that run the full `Builder.Build()`
+pipeline and verify SOPS metadata is stripped from the output:
+
+- `build helmrelease with sops metadata` — builds a Kustomization directory containing a
+  HelmRelease with a `.sops` block; asserts the `.sops` field is absent and the
+  `ENC[…]` values are preserved.
+- `build configmap with sops metadata` — same for a SOPS-encrypted ConfigMap, closing
+  the ConfigMap test-coverage gap identified in the plan.
+
+**Files:**
+- `cmd/flux/build_kustomization_test.go`
+- `cmd/flux/testdata/build-kustomization/sops-helmrelease/kustomization.yaml`
+- `cmd/flux/testdata/build-kustomization/sops-helmrelease/helmrelease.yaml`
+- `cmd/flux/testdata/build-kustomization/sops-helmrelease-result.yaml`
+- `cmd/flux/testdata/build-kustomization/sops-configmap/kustomization.yaml`
+- `cmd/flux/testdata/build-kustomization/sops-configmap/configmap.yaml`
+- `cmd/flux/testdata/build-kustomization/sops-configmap-result.yaml`
+
 ---
 
 ## What Still Needs to Be Done
-
-### High priority
-
-- [ ] **End-to-end / build-kustomization test with a SOPS-encrypted HelmRelease**
-  Add a test case in `cmd/flux/build_kustomization_test.go` + testdata fixture (a fake
-  Kustomization + HelmRelease with a `.sops` block) that runs through
-  `Builder.Build()` and asserts the `.sops` field is absent from the output. This tests
-  the full build pipeline rather than just the `maskSopsData` unit in isolation.
-
-- [ ] **Verify `flux diff kustomization` path**
-  `diff.go` calls the same `Builder` so benefits from the same fix; however, it uses a
-  server-side apply dry-run. A unit or e2e test confirming that a SOPS-encrypted
-  HelmRelease no longer triggers a schema error during diff would close this gap.
 
 ### Medium priority
 
@@ -91,11 +101,6 @@ And a corresponding golden file verifying the generated `spec.decryption` block.
   This is intentional (ciphertext ≠ plaintext), but some teams may prefer all SOPS
   material to be redacted. A future change could replace `ENC[…]` values with
   `**SOPS**` for non-Secret resources as well.
-
-- [ ] **ConfigMap support**
-  ConfigMaps can also be SOPS-encrypted via kustomize-controller. The new `else` branch
-  already covers them (it applies to all non-Secret kinds), but a dedicated test case
-  for ConfigMap would improve confidence.
 
 ### Low priority
 

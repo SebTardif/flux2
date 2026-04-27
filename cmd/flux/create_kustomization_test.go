@@ -44,6 +44,7 @@ func TestCreateKustomization(t *testing.T) {
 				"--decryption-provider=sops " +
 				"--decryption-secret=sops-age " +
 				"--namespace=flux-system " +
+				"--interval=1m " +
 				"--export",
 			assert: assertGoldenFile("testdata/create_kustomization/with-sops-decryption.yaml"),
 		},
